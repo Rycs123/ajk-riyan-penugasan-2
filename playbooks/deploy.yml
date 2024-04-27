@@ -1,0 +1,8 @@
+- hosts: localhost
+  gather_facts: false
+  become: true
+  vars_files:
+    - env/vars.yml
+  roles:
+    - name: frontend-deploy
+    - name: backend-deploy

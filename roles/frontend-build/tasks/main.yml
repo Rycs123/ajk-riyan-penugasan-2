@@ -1,0 +1,101 @@
+---
+# tasks file for frontend-build
+- name: Download nvm installation script
+  get_url:
+    url: "https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh"
+    dest: "/tmp/install_nvm.sh"
+
+- name: Run nvm installation script
+  shell: bash /tmp/install_nvm.sh
+  args:
+    creates: "~/.nvm"
+
+- name: Source .bashrc to activate nvm
+  shell: source ~/.bashrc
+
+- name: Add Yarn repository GPG key
+  apt_key:
+    url: https://dl.yarnpkg.com/debian/pubkey.gpg
+    state: present
+
+- name: Add Yarn repository to APT sources
+  apt_repository:
+  repo: "deb https://dl.yarnpkg.com/debian/ stable main"
+    state: present
+
+- name: Update APT package cache
+  apt:
+    update_cache: yes
+
+- name: Install Yarn
+  apt:
+      name: yarn
+      state: present
+    
+- name: Clone the repository
+  git:
+    repo: https://github.com/elshiraphine/fe-todo.git
+    dest: /var/www/fe-todo
+    update: no
+    register: clone_result
+  
+- name: Read package.json
+  slurp:
+    src: /var/www/fe-todo/package.json
+  register: package_json_content
+
+- name: Extract version from package.json
+  set_fact:
+    app_version: "{{ (package_json_content['content'] | b64decode | from_json)['version'] }}"
+
+- name: Print application version
+  debug:
+    msg: "Application version is {{ app_version }}"
+
+- name: Install nvm dependencies
+  apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+      - curl
+      - bash
+
+- name: Download nvm installation script
+  get_url:
+    url: "https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh"
+    dest: "/tmp/install_nvm.sh"
+
+- name: Run nvm installation script
+  shell: bash /tmp/install_nvm.sh
+  args:
+    creates: "~/.nvm"
+
+- name: Source .bashrc to activate nvm
+  shell: source ~/.bashrc
+
+- name: Install Node.js version 18
+  shell: nvm install 18
+
+- name: Set Node.js version 18 as default
+  shell: nvm alias default 18
+
+
+- name: Install npm
+  apt:
+    name: npm
+    state: present
+
+- name: Install PM2 globally
+  npm:
+    name: pm2
+    global: yes
+
+- name: Change directory to fe-todo
+  become_user: www-data
+  shell: cd /var/www/fe-todo
+
+- name: Install packages and build repository
+  become_user: www-data
+  shell: |
+    yarn install --ignore-engines && yarn build
+

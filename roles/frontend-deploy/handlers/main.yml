@@ -1,0 +1,5 @@
+- name: Create symlink and restart Nginx
+  become: true
+  shell: |
+    ln -s /etc/nginx/sites-available/fe /etc/nginx/sites-enabled/
+    service nginx restart

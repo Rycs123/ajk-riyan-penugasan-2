@@ -1,0 +1,11 @@
+user: root
+
+fe_github: https://github.com/elshiraphine/fe-todo
+fe_dir: /var/www/frontend
+be_github: https://github.com/elshiraphine/be-todo
+be_dir: /var/www/backend
+
+mysql_db: laravel
+mysql_user: root
+mysql_pw: 123
+mysql_root_pw: "root"
