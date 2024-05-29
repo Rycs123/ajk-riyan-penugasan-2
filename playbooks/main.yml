@@ -1,10 +1,13 @@
-# - import_playbook: prepare.yml
+# playbooks/main.yml
+---
+- import_playbook: prepare.yml
 - import_playbook: build.yml
 - import_playbook: migrate.yml
 - import_playbook: deploy.yml
 
-- hosts: localhost
+- name: Run playbook main
+  hosts: localhost
+  become: yes
+  become_method: sudo
   vars_files:
-    - ../env/vars.yml
-  gather_facts: true
-  become: true
+    - ../vault.yml
