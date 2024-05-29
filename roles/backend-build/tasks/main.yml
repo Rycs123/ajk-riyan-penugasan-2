@@ -1,5 +1,8 @@
 ---
-# tasks file for backend
+# tasks file for roles/backend-build
+- name: Load variables from vault.yml
+  include_vars:
+    file: ../../../vault.yml
 
 - name: Add PHP repo
   become: true
@@ -7,7 +10,7 @@
     repo: ppa:ondrej/php
     state: present
 
-- name: Update apt
+- name: Update
   become: true
   apt:
     update_cache: yes
@@ -16,24 +19,27 @@
   become: true
   apt:
     name:
-      - php8.1-common
-      - php8.1-cli
-      - php8.1-mbstring
-      - php8.1-xml
+      - php8.3-common
+      - php8.3-cli
+      - php8.3-mbstring
+      - php8.3-xml
       - unzip
-      - php8.1-curl
-      - php8.1-mysql
-      - php8.1-fpm
-      - php8.1-intl
+      - php8.3-curl
+      - php8.3-mysql
+      - php8.3-fpm
+      - php8.3-intl
+      - curl
+      - openssl
+      - ca-certificates
+      - zlib1g
     state: present
     update_cache: yes
 
 - name: Add safe directory for Git
   community.general.git_config:
-    name: core.excludesfile
-    value: /etc/gitignore_global
+    name: safe.directory
+    value: /var/www/be-todo
     scope: global
-  become: true
 
 - name: Clone Repo BE
   git:
@@ -64,23 +70,60 @@
     recurse: yes
   become: true
 
-- name: Download Composer setup script
-  command: 'php -r "copy(''https://getcomposer.org/installer'', ''composer-setup.php'');"'
-  args:
-    executable: /bin/bash
+- name: Ensure zlib is enabled in PHP
+  shell: |
+    if ! php -m | grep -q 'zlib'; then
+      echo "zlib is not enabled. Please enable it in your PHP configuration."
+      exit 1
+    fi
 
-# - name: Download Composer setup script
-#   command: "curl -sS https://getcomposer.org/installer -o composer-setup.php"
+- name: Ensure openssl is enabled in PHP
+  shell: |
+    if ! php -m | grep -q 'openssl'; then
+      echo "openssl is not enabled. Please enable it in your PHP configuration."
+      exit 1
+    fi
+
+- name: Download Composer installer using alternative method
+  get_url:
+    url: https://getcomposer.org/installer
+    dest: /var/www/be-todo/composer-setup.php
+    mode: "0755"
+    timeout: 60
+  become: true
+
+- name: Verify Composer installer
+  shell: "php composer-setup.php --check"
+  args:
+    chdir: /var/www/be-todo
+  register: composer_verify
 
 - name: Install Composer
   command: "php composer-setup.php --install-dir=/usr/local/bin --filename=composer"
   args:
-    executable: /bin/bash
+    chdir: /var/www/be-todo
+  when: composer_verify.rc == 0
 
-- name: Remove Composer setup script
-  command: 'php -r "unlink(''composer-setup.php'');"'
+- name: Remove Composer installer
+  command: "rm composer-setup.php"
   args:
-    executable: /bin/bash
+    chdir: /var/www/be-todo
+
+- name: Remove composer.lock file
+  command: "rm composer.lock"
+  args:
+    chdir: /var/www/be-todo
+  become: true
+
+- name: Update Composer Dependencies as root
+  community.general.composer:
+    command: update
+    working_dir: /var/www/be-todo
+    arguments: "--no-plugins --no-scripts"
+  become: true
+  become_user: root
+  environment:
+    COMPOSER_ALLOW_SUPERUSER: "1"
 
 - name: Install Composer Dependencies as root
   community.general.composer:
@@ -92,12 +135,32 @@
   environment:
     COMPOSER_ALLOW_SUPERUSER: "1"
 
-- name: Update Composer Dependencies as root
+- name: Copy env
+  become: true
+  copy:
+    src: templates/env-template
+    dest: /var/www/be-todo/.env
+
+- name: Configure Laravel database
+  template:
+    src: templates/env-template
+    dest: /var/www/be-todo/.env
+  vars:
+    db_name: "{{  var_name }}"
+    db_user: "{{  var_user }}"
+    db_password: "{{  var_password }}"
+
+- name: Run composer dump-autoload
   community.general.composer:
-    command: update
+    command: dump-autoload
     working_dir: /var/www/be-todo
-    arguments: "--no-plugins --no-scripts"
   become: true
   become_user: root
   environment:
     COMPOSER_ALLOW_SUPERUSER: "1"
+
+- name: Generate App Key
+  shell: |
+    cd /var/www/be-todo
+    php artisan key:generate
+  become: yes
