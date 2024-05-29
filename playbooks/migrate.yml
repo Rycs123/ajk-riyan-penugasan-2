@@ -1,7 +1,6 @@
+# playbooks/migrate.yml
+---
 - hosts: localhost
-  gather_facts: true
-  become: true
-  vars_files:
-    - env/vars.yml
+  become: yes
   roles:
-    - name: backend-migrate
+    - backend-migrate
