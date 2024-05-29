@@ -1,0 +1,8 @@
+---
+# vars file for roles/mysql-prepare
+db_name: ansible
+db_user: riyanda
+# db_password: "{{ (lookup('file', 'vault.yml') | from_yaml).db_password | default('') }}"
+db_password: "{{ (lookup('file', '../../../vault.yml') | from_yaml).db_password | default('') }}"
+mysql_root_user: "{{ (lookup('file', '../../../vault.yml') | from_yaml).mysql_root_user | default('') }}"
+mysql_root_password: "{{ (lookup('file', '../../../vault.yml') | from_yaml).mysql_root_password | default('') }}"

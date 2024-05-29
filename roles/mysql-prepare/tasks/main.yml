@@ -1,36 +1,36 @@
 ---
-# tasks file for mysql-prepare
-- name: Install Nginx
+# tasks file for mysql
+
+- name: Install MySQL
   apt:
-    name:
-      - nginx
+    name: "{{ item }}"
     state: present
-  become: true
-  notify:
-    - Restart Nginx
-    - Enable Nginx
+  loop:
+    - mysql-server
+    - mysql-client
+    - python3-mysqldb
 
-- name: Enable nginx to start automatically
-  service:
-    name: nginx
-    enabled: yes
-  become: true
-  notify: Restart Nginx
+- name: Create DB User
+  community.mysql.mysql_db:
+    login_user: "{{ mysql_root_user }}"
+    login_password: "{{ mysql_root_password }}"
+    name: "{{ db_name }}"
+    state: present
 
-- name: Disable default nginx site
-  file:
-    path: /etc/nginx/sites-enabled/default
-    state: absent
-  become: true
-  notify: Restart Nginx
+- name: Config user
+  community.mysql.mysql_user:
+    login_user: "{{ mysql_root_user }}"
+    login_password: "{{ mysql_root_password }}"
+    name: "{{ db_user }}"
+    password: "{{ db_password }}"
+    priv: "{{ db_name }}.*:ALL"
+    state: present
+    column_case_sensitive: false
 
-- name: Enable UFW
-  become: true
-  community.general.ufw:
-    state: enabled
-
-- name: Generate nginx config
-  template:
-    src: templates/nginx-config.j2
-    dest: /etc/nginx/conf.d/ansible.conf
-  notify: Reload Nginx
+- name: Enable remote login to mysql
+  lineinfile:
+    path: /etc/mysql/mysql.conf.d/mysqld.cnf
+    regexp: "^bind-address"
+    line: "bind-address = 0.0.0.0"
+    backup: true
+  notify: Restart mysql
