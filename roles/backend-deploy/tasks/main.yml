@@ -1,8 +1,31 @@
+---
+# tasks file for roles/backend-deploy
+- name: Ensure PHP 8.3 FPM is started and enabled
+  become: true
+  service:
+    name: php8.3-fpm
+    state: started
+    enabled: yes
+
+- name: Update .env to use port 9000
+  become: true
+  lineinfile:
+    path: /var/www/be-todo/.env
+    regexp: "^APP_PORT="
+    line: "APP_PORT=9000"
+    create: yes
+
 - name: Copy be template
   become: true
   copy:
-    src: backend/templates/be-template.j2
+    src: templates/be-template.j2
     dest: /etc/nginx/sites-available/backend
+
+- name: Restart PHP 8.3 FPM
+  become: true
+  service:
+    name: php8.3-fpm
+    state: restarted
 
 - name: Link to site-enabled
   file:
@@ -18,6 +41,26 @@
     method: GET
     return_content: yes
   register: result
+
+- name: Register user via API
+  uri:
+    url: "http://localhost:9000/api/register"
+    method: POST
+    headers:
+      Content-Type: "application/json"
+    body: |
+      {
+        "name": "admin",
+        "email": "admin@email.com",
+        "password": "freeTest12345"
+      }
+    body_format: json
+    status_code: [200, 201]
+  register: register_result
+
+- name: Debug registration response
+  debug:
+    var: register_result
 
 - name: Display response
   debug:
