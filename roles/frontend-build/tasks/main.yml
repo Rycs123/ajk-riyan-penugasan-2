@@ -1,101 +1,139 @@
 ---
-# tasks file for frontend-build
-- name: Download nvm installation script
-  get_url:
-    url: "https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh"
-    dest: "/tmp/install_nvm.sh"
+# tasks file for roles/frontend-build
+- name: Load variables from vault.yml
+  include_vars:
+    file: ../../../vault.yml
 
-- name: Run nvm installation script
-  shell: bash /tmp/install_nvm.sh
+- name: Install dependencies for nvm
+  apt:
+    name:
+      - curl
+      - build-essential
+      - libssl-dev
+    state: present
+    update_cache: yes
+
+- name: Download and install nvm
+  shell: |
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
   args:
-    creates: "~/.nvm"
+    executable: /bin/bash
 
-- name: Source .bashrc to activate nvm
-  shell: source ~/.bashrc
-
-- name: Add Yarn repository GPG key
+- name: Add Yarn APT key
   apt_key:
     url: https://dl.yarnpkg.com/debian/pubkey.gpg
     state: present
 
-- name: Add Yarn repository to APT sources
+- name: Add Yarn APT repository
   apt_repository:
-  repo: "deb https://dl.yarnpkg.com/debian/ stable main"
+    repo: "deb https://dl.yarnpkg.com/debian/ stable main"
     state: present
 
-- name: Update APT package cache
+- name: Update APT cache
   apt:
     update_cache: yes
 
 - name: Install Yarn
   apt:
-      name: yarn
-      state: present
-    
-- name: Clone the repository
-  git:
-    repo: https://github.com/elshiraphine/fe-todo.git
-    dest: /var/www/fe-todo
-    update: no
-    register: clone_result
-  
-- name: Read package.json
-  slurp:
-    src: /var/www/fe-todo/package.json
-  register: package_json_content
-
-- name: Extract version from package.json
-  set_fact:
-    app_version: "{{ (package_json_content['content'] | b64decode | from_json)['version'] }}"
-
-- name: Print application version
-  debug:
-    msg: "Application version is {{ app_version }}"
-
-- name: Install nvm dependencies
-  apt:
-    name: "{{ item }}"
+    name: yarn
     state: present
-  loop:
-      - curl
-      - bash
 
-- name: Download nvm installation script
-  get_url:
-    url: "https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh"
-    dest: "/tmp/install_nvm.sh"
+- name: Ensure Yarn is installed
+  command: yarn --version
+  register: yarn_version
 
-- name: Run nvm installation script
-  shell: bash /tmp/install_nvm.sh
+- name: Debug Yarn version
+  debug:
+    var: yarn_version.stdout
+
+- name: Install Node.js version 20 using nvm
+  shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    nvm install 20
+    nvm alias default 20
   args:
-    creates: "~/.nvm"
+    executable: /bin/bash
+  environment:
+    HOME: /root
 
-- name: Source .bashrc to activate nvm
-  shell: source ~/.bashrc
+- name: Ensure Node.js version 20 is installed
+  shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    node --version
+  args:
+    executable: /bin/bash
+  register: node_version
 
-- name: Install Node.js version 18
-  shell: nvm install 18
-
-- name: Set Node.js version 18 as default
-  shell: nvm alias default 18
-
+- name: Debug nvm version
+  debug:
+    var: node_version.stdout
 
 - name: Install npm
   apt:
     name: npm
     state: present
 
-- name: Install PM2 globally
+- name: Install pm2 globally using npm
   npm:
     name: pm2
     global: yes
 
-- name: Change directory to fe-todo
-  become_user: www-data
-  shell: cd /var/www/fe-todo
+- name: Ensure pm2 is installed
+  command: pm2 --version
+  register: pm2_version
 
-- name: Install packages and build repository
-  become_user: www-data
+- name: Debug pm2 version
+  debug:
+    var: pm2_version.stdout
+
+- name: Add safe directory for Git
+  community.general.git_config:
+    name: safe.directory
+    value: /var/www/fe-todo
+    scope: global
+
+- name: Clone Repo FE
+  git:
+    repo: https://github.com/elshiraphine/fe-todo.git
+    dest: /var/www/fe-todo
+    version: main
+    force: yes
+
+- name: Change permission
+  file:
+    path: /var/www/fe-todo
+    mode: "0777"
+    recurse: yes
+  become: true
+
+- name: Change ownership
+  file:
+    path: /var/www/fe-todo
+    owner: www-data
+    group: www-data
+    recurse: yes
+  become: true
+
+- name: Change directory to /var/www/fe-todo and install dependencies
   shell: |
-    yarn install --ignore-engines && yarn build
+    cd /var/www/fe-todo
+    yarn install --ignore-engines
+  args:
+    executable: /bin/bash
 
+- name: Update baseURL in config.ts using template
+  become: true
+  template:
+    src: templates/config.ts.j2
+    dest: /var/www/fe-todo/src/app/config/config.ts
+  vars:
+    base_url: "http://localhost:9000/api"
+
+- name: Build the project
+  shell: |
+    cd /var/www/fe-todo
+    yarn build
+  args:
+    executable: /bin/bash
