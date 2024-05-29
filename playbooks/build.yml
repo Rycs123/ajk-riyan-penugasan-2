@@ -1,8 +1,7 @@
+# playbooks/build.yml
+---
 - hosts: localhost
-  gather_facts: true
-  become: true
-  vars_files:
-    - env/vars.yml
+  become: yes
   roles:
-    # - name: frontend-build
-    - name: backend-build
+    - frontend-build
+    - backend-build
