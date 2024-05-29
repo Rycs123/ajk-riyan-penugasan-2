@@ -1,36 +1,8 @@
 ---
-# tasks file for frontend-deploy
-- name: Start fe-todo application using PM2
-  shell: pm2 start --name fe-todo "yarn start"
-
-- name: Change directory to Nginx sites-available
-  shell: cd /etc/nginx/sites-available
-
-- name: Create fe configuration file
-  copy:
-    content: |
-      server {
-          listen 80;
-          server_name _;
-          access_log /var/log/nginx/fe_access.log;
-          error_log /var/log/nginx/fe_error.log;
-
-          # for public asset into _next directory
-          location _next/ {
-              alias /var/www/fe-todo/.next/;
-              expires 30d;
-              access_log on;
-          }
-
-          location / {
-              proxy_pass http://localhost:3000;
-              proxy_http_version 1.1;
-              proxy_set_header Upgrade $http_upgrade;
-              proxy_set_header Connection 'upgrade';
-              proxy_set_header Host $host;
-              proxy_cache_bypass $http_upgrade;
-          }
-      }
-    dest: /etc/nginx/sites-available/fe
-  notify:
-    - Create symlink and restart Nginx
+# tasks file for roles/frontend-deploy
+- name: Start frontend application using pm2
+  shell: |
+    cd /var/www/fe-todo
+    pm2 start --name fe-todo "yarn start"
+  args:
+    executable: /bin/bash
