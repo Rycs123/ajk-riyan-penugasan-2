@@ -1,7 +1,7 @@
+# playbooks/prepare.yml
+---
 - hosts: localhost
-  gather_facts: true
-  become: true
-  vars_files:
-    - env/vars.yml
+  become: yes
   roles:
-    - name: mysql-prepare
+    - mysql-prepare
+    - nginx-prepare
