@@ -7,6 +7,6 @@
 
 # Screenshot
 
-<img src="https://cdn.discordapp.com/attachments/1210251261450919959/1245313955530801152/Screenshot_from_2024-05-29_16-37-35.png?ex=66584c7f&is=6656faff&hm=9fba1a89f0d6450ca1a82220a191dff4349f7ec8d26845798f5dfc59e450f29c&" width="auto" height="auto">
+<img src="https://media.discordapp.net/attachments/1210251261450919959/1245313955530801152/Screenshot_from_2024-05-29_16-37-35.png?ex=6685c83f&is=668476bf&hm=73d2bdfc31174e6651f442fed84e9c0322c478d5af727ef79cf8ed3278ddd12c&=&format=webp&quality=lossless&width=1079&height=607" width="auto" height="auto">
 
-<img src="https://cdn.discordapp.com/attachments/1210251261450919959/1245313994139369522/Screenshot_from_2024-05-29_16-36-53.png?ex=66584c89&is=6656fb09&hm=768fa9999614173c0ffca91ca5c6e6e30692a9776d0b9570e4e31586ac85b314&" width="auto" height="auto">
+<img src="https://media.discordapp.net/attachments/1210251261450919959/1245313994139369522/Screenshot_from_2024-05-29_16-36-53.png?ex=6685c849&is=668476c9&hm=72518e772e532ee40c86e6ee48ea12ddba35de81b7219a161d8bfea1a5110094&=&format=webp&quality=lossless&width=1079&height=607" width="auto" height="auto">
