@@ -4,6 +4,10 @@
   include_vars:
     file: ../../../vault.yml
 
+- name: Load variables from env/vars.yml
+  include_vars:
+    file: ../../../env/vars.yml
+
 - name: Add PHP repo
   become: true
   apt_repository:
@@ -38,19 +42,19 @@
 - name: Add safe directory for Git
   community.general.git_config:
     name: safe.directory
-    value: /var/www/be-todo
+    value: "{{ backend_dir }}"
     scope: global
 
 - name: Clone Repo BE
   git:
-    repo: https://github.com/elshiraphine/be-todo.git
-    dest: /var/www/be-todo
+    repo: "{{ backend_repo }}"
+    dest: "{{ backend_dir }}"
     version: master
     force: yes
 
 - name: Change permission
   file:
-    path: /var/www/be-todo
+    path: "{{ backend_dir }}"
     mode: "0775"
     recurse: yes
   become: true
@@ -64,30 +68,16 @@
 
 - name: Change ownership
   file:
-    path: /var/www/be-todo
+    path: "{{ backend_dir }}"
     owner: www-data
     group: www-data
     recurse: yes
   become: true
 
-- name: Ensure zlib is enabled in PHP
-  shell: |
-    if ! php -m | grep -q 'zlib'; then
-      echo "zlib is not enabled. Please enable it in your PHP configuration."
-      exit 1
-    fi
-
-- name: Ensure openssl is enabled in PHP
-  shell: |
-    if ! php -m | grep -q 'openssl'; then
-      echo "openssl is not enabled. Please enable it in your PHP configuration."
-      exit 1
-    fi
-
 - name: Download Composer installer using alternative method
   get_url:
     url: https://getcomposer.org/installer
-    dest: /var/www/be-todo/composer-setup.php
+    dest: "{{ backend_dir }}/composer-setup.php"
     mode: "0755"
     timeout: 60
   become: true
@@ -95,30 +85,30 @@
 - name: Verify Composer installer
   shell: "php composer-setup.php --check"
   args:
-    chdir: /var/www/be-todo
+    chdir: "{{ backend_dir }}"
   register: composer_verify
 
 - name: Install Composer
   command: "php composer-setup.php --install-dir=/usr/local/bin --filename=composer"
   args:
-    chdir: /var/www/be-todo
+    chdir: "{{ backend_dir }}"
   when: composer_verify.rc == 0
 
 - name: Remove Composer installer
   command: "rm composer-setup.php"
   args:
-    chdir: /var/www/be-todo
+    chdir: "{{ backend_dir }}"
 
 - name: Remove composer.lock file
   command: "rm composer.lock"
   args:
-    chdir: /var/www/be-todo
+    chdir: "{{ backend_dir }}"
   become: true
 
 - name: Update Composer Dependencies as root
   community.general.composer:
     command: update
-    working_dir: /var/www/be-todo
+    working_dir: "{{ backend_dir }}"
     arguments: "--no-plugins --no-scripts"
   become: true
   become_user: root
@@ -128,7 +118,7 @@
 - name: Install Composer Dependencies as root
   community.general.composer:
     command: install
-    working_dir: /var/www/be-todo
+    working_dir: "{{ backend_dir }}"
     arguments: "--no-plugins --no-scripts"
   become: true
   become_user: root
@@ -139,12 +129,12 @@
   become: true
   copy:
     src: templates/env-template
-    dest: /var/www/be-todo/.env
+    dest: "{{ backend_dir }}/.env"
 
 - name: Configure Laravel database
   template:
     src: templates/env-template
-    dest: /var/www/be-todo/.env
+    dest: "{{ backend_dir }}/.env"
   vars:
     db_name: "{{  var_name }}"
     db_user: "{{  var_user }}"
@@ -153,7 +143,7 @@
 - name: Run composer dump-autoload
   community.general.composer:
     command: dump-autoload
-    working_dir: /var/www/be-todo
+    working_dir: "{{ backend_dir }}"
   become: true
   become_user: root
   environment:
@@ -161,6 +151,6 @@
 
 - name: Generate App Key
   shell: |
-    cd /var/www/be-todo
+    cd "{{ backend_dir }}"
     php artisan key:generate
   become: yes

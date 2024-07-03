@@ -1,12 +1,15 @@
 ---
-# tasks file for backend
+# tasks file for backend-migrate
+- name: Load variables from env/vars.yml
+  include_vars:
+    file: ../../../env/vars.yml
 
 - name: Run PHP Artisan Migrate
   command:
     cmd: "php artisan migrate"
-    chdir: "/var/www/be-todo"
+    chdir: "{{ backend_dir }}"
 
 - name: Generate JWT Secret
   command:
     cmd: "php artisan jwt:secret"
-    chdir: "/var/www/be-todo"
+    chdir: "{{ backend_dir }}"

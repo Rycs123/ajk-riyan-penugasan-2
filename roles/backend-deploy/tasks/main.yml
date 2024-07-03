@@ -1,5 +1,9 @@
 ---
 # tasks file for roles/backend-deploy
+- name: Load variables from env/vars.yml
+  include_vars:
+    file: ../../../env/vars.yml
+
 - name: Ensure PHP 8.3 FPM is started and enabled
   become: true
   service:
@@ -10,7 +14,7 @@
 - name: Update .env to use port 9000
   become: true
   lineinfile:
-    path: /var/www/be-todo/.env
+    path: "{{ backend_dir }}/.env"
     regexp: "^APP_PORT="
     line: "APP_PORT=9000"
     create: yes

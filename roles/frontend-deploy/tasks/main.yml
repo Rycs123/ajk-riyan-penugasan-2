@@ -1,8 +1,12 @@
 ---
 # tasks file for roles/frontend-deploy
+- name: Load variables from env/vars.yml
+  include_vars:
+    file: ../../../env/vars.yml
+
 - name: Start frontend application using pm2
   shell: |
-    cd /var/www/fe-todo
+    cd "{{ frontend_dir }}"
     pm2 start --name fe-todo "yarn start"
   args:
     executable: /bin/bash
