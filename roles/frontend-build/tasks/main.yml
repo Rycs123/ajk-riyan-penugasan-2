@@ -1,9 +1,5 @@
 ---
 # tasks file for roles/frontend-build
-- name: Load variables from vault.yml
-  include_vars:
-    file: ../../../vault.yml
-
 - name: Load variables from env/vars.yml
   include_vars:
     file: ../../../env/vars.yml
